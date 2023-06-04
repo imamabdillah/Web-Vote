@@ -1,0 +1,14 @@
+db: SEMIRA
+Tabel:
+- pengguna
+- mahasiswa
+- dosenstaff
+- kandidat
+
+Rancangan Menu Utama
+- Admin
+  -- Daftar Admin
+  -- Tambah Admin
+- mahasiswa
+- dosenstaff
+- Kandidat
