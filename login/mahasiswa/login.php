@@ -35,6 +35,7 @@
             <input type="submit" name="simpan" value="Login" class="login__submit" />
             <!--<button type="button" class="login__submit">Sign in</button>-->
             <p class="login__signup">Kembali ke Web &nbsp;<a href="../../index.php">HOME</a></p>
+            <p class="login__signup">Belum memiliki Akun? &nbsp;<a href="register.php">Register</a></p>
           </form>
 
         </div>

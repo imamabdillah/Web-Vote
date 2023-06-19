@@ -1,7 +1,12 @@
 <?php
+session_start();
 include "koneksi.php";
+if (!isset($_SESSION['username'])) {
+	header("Location: login.php");
+	exit;
+}
 
-// Fungsi untuk mengupdate jumlah suara kandidat
+// Fungsi untuk mengupdate jumlah suara dan menandai pengguna telah melakukan vote
 function updateJumlahSuara($koneksi, $id)
 {
 	// Mengambil jumlah suara saat ini dari database
@@ -19,12 +24,29 @@ function updateJumlahSuara($koneksi, $id)
 // Cek apakah tombol "Vote" diklik
 if (isset($_POST['vote'])) {
 	$idKandidat = $_POST['id_kandidat'];
-	// Memanggil fungsi untuk mengupdate jumlah suara
-	updateJumlahSuara($koneksi, $idKandidat);
-	// Redirect ke halaman sukses setelah voting
-	header("Location: sukses_vote.php");
-	exit;
+
+	// Cek apakah pengguna sudah melakukan vote sebelumnya
+	$id = $_SESSION['id']; // Diasumsikan Anda telah menyimpan ID pengguna dalam variabel sesi
+	$query = mysqli_query($koneksi, "SELECT has_vote FROM users WHERE id = $id");
+	$row = mysqli_fetch_assoc($query);
+	$hasVote = $row['has_vote'];
+
+	if ($hasVote == 0) {
+		// Panggil fungsi untuk mengupdate jumlah suara dan menandai pengguna telah melakukan vote
+		updateJumlahSuara($koneksi, $idKandidat);
+
+		// Menandai pengguna telah melakukan vote dengan mengatur 'has_vote' menjadi 1
+		mysqli_query($koneksi, "UPDATE users SET has_vote = 1 WHERE id = $id");
+
+		// Redirect ke halaman sukses setelah voting
+		header("Location: sukses_vote.php");
+		exit;
+	} else {
+		// Redirect ke halaman error jika pengguna sudah melakukan vote sebelumnya
+		exit;
+	}
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -34,7 +56,7 @@ if (isset($_POST['vote'])) {
 	<meta charset="utf-8">
 	<meta content="width=device-width, initial-scale=1.0" name="viewport">
 
-	<title>Bootslander Bootstrap Template - Index</title>
+	<title>Vote</title>
 	<meta content="" name="description">
 	<meta content="" name="keywords">
 
@@ -55,7 +77,7 @@ if (isset($_POST['vote'])) {
 	<link href="../../assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
 
 	<!-- Template Main CSS File -->
-	<link href="../../assets/css/pemilihan.css" rel="stylesheet">
+	<link href="../../assets/css/vote.css" rel="stylesheet">
 
 	<!-- =======================================================
   * Template Name: Bootslander
@@ -132,7 +154,12 @@ if (isset($_POST['vote'])) {
 	<!-- End Hero -->
 
 	<main id="main">
-
+		<div class="status">
+			<div class="timer" id="timer">00:00:00</div>
+			<div class="progress-bar">
+				<div class="progress" id="progress"></div>
+			</div>
+		</div>
 
 		<!-- ======= Team Section ======= -->
 		<section id="team" class="team">
@@ -168,7 +195,7 @@ if (isset($_POST['vote'])) {
 								<p><?php echo $kandidat1['misi']; ?></p>
 								<form method="POST" action="">
 									<input type="hidden" name="id_kandidat" value="<?php echo $kandidat1['id']; ?>">
-									<button type="submit" name="vote" class="btn btn-primary">Vote</button>
+									<button id="voteButton1" type="submit" name="vote" class="btn btn-primary" onclick="return konfirmasiVote()">Vote</button>
 								</form>
 							</div>
 						</div>
@@ -187,22 +214,15 @@ if (isset($_POST['vote'])) {
 								<p><?php echo $kandidat2['misi']; ?></p>
 								<form method="POST" action="">
 									<input type="hidden" name="id_kandidat" value="<?php echo $kandidat2['id']; ?>">
-									<button type="submit" name="vote" class="btn btn-primary">Vote</button>
+									<button id="voteButton2" type="submit" name="vote" class="btn btn-primary" onclick="return konfirmasiVote()">Vote</button>
 								</form>
 							</div>
 						</div>
 					</div>
-
-
-
-
 				</div>
-
 			</div>
 		</section>
 		<!-- End Team Section -->
-
-
 		<!-- ======= Contact Section ======= -->
 		<section id="contact" class="contact">
 			<div class="container">
@@ -213,7 +233,6 @@ if (isset($_POST['vote'])) {
 				</div>
 
 				<div class="row">
-
 					<div class="col-lg-4" data-aos="fade-right" data-aos-delay="100">
 						<div class="info">
 							<div class="address">
@@ -268,6 +287,58 @@ if (isset($_POST['vote'])) {
 
 	<!-- Template Main JS File -->
 	<script src="../../assets/js/pemilihan.js"></script>
+	<script>
+		function konfirmasiVote() {
+			return confirm("Apakah Anda yakin ingin memilih kandidat ini?");
+		}
+	</script>
+	<script>
+		// Mengatur waktu awal pemilihan (dalam detik)
+		var duration = 300; // misalnya 1 jam
+
+		// Mengambil elemen timer, progress, dan tombol vote
+		var timerElement = document.getElementById('timer');
+		var progressElement = document.getElementById('progress');
+		var voteButton = document.getElementById('voteButton');
+
+		// Menghitung waktu yang tersisa dalam format jam:menit:detik
+		function formatTime(seconds) {
+			var hours = Math.floor(seconds / 3600);
+			var minutes = Math.floor((seconds % 3600) / 60);
+			var remainingSeconds = seconds % 60;
+
+			return (
+				hours.toString().padStart(2, '0') +
+				':' +
+				minutes.toString().padStart(2, '0') +
+				':' +
+				remainingSeconds.toString().padStart(2, '0')
+			);
+		}
+
+		// Mengupdate timer dan progress bar setiap detik
+		function updateTimer() {
+			duration--;
+
+			if (duration >= 0) {
+				timerElement.innerHTML = formatTime(duration);
+				progressElement.style.width = ((duration / 3600) * 100) + '%';
+
+				// Cek apakah tersisa waktu kurang dari 10 detik
+				if (duration <= 150) {
+					progressElement.classList.add('critical'); // Tambahkan class critical pada elemen progres
+				}
+				setTimeout(updateTimer, 1000);
+			} else {
+				timerElement.innerHTML = 'Waktu pemilihan telah berakhir';
+				voteButton1.disabled = true; // Menonaktifkan tombol vote
+				voteButton2.disabled = true;
+			}
+		}
+
+		// Memulai pembaruan timer dan progress bar
+		updateTimer();
+	</script>
 
 </body>
 

@@ -1,28 +1,38 @@
 <?php
-
-
-$koneksi = mysqli_connect("localhost","root","","mahasiswauns");
+session_start();
+$koneksi = mysqli_connect("localhost", "root", "", "mahasiswauns");
 
 if (mysqli_connect_error()) {
-	echo "koneksi peset".mysqli_connect();
+	echo "Koneksi gagal: " . mysqli_connect_error();
+	exit;
 }
 
-$user = $_POST['username'];
-$pass = $_POST['password'];
-$sql = "SELECT * FROM db_mahasiswa WHERE username='$user' AND pass='$pass'";
-$login=mysqli_query($koneksi,$sql);
-if ($login == false) {
-	echo "Error: " . mysqli_error($koneksi);
-  } else {
-	$ketemu = mysqli_num_rows($login);
-	$b = mysqli_fetch_object($login);
-}
+if (isset($_POST['username']) && isset($_POST['password'])) {
+	$username = $_POST['username'];
+	$password = $_POST['password'];
 
-if(mysqli_num_rows($login) > 0){
-	echo '<script>window.location="index1.php"</script>';
-}else{
-	echo '<script language="javascript">';
-		echo 'alert ("Username/Password ada yang salah, atau akun anda belum Aktif ,Jika ada kendala bisa hubungi ADMIN")';
-	echo '</script>';
-	echo '<script>window.location="login.php"</script>';
+	$query = "SELECT * FROM users WHERE username='$username' AND password='$password'";
+	$result = mysqli_query($koneksi, $query);
+
+	if (mysqli_num_rows($result) > 0) {
+		$user = mysqli_fetch_assoc($result);
+
+		$_SESSION['username'] = $user['username'];
+		$_SESSION['id'] = $user['id'];
+		$_SESSION['has_vote'] = $user['has_vote'];
+
+		if ($user['has_vote'] == 0) {
+			header("Location: index1.php");
+			exit;
+		} elseif ($user['has_vote'] == 1) {
+			header("Location: sukses_vote.php");
+			exit;
+		}
+	} else {
+		echo '<script language="javascript">';
+		echo 'alert ("Username/Password ada yang salah, atau akun anda belum Aktif, Jika ada kendala bisa hubungi ADMIN")';
+		echo '</script>';
+		header("Location: login.php");
+		exit;
+	}
 }
